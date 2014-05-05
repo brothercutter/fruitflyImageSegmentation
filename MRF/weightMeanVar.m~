@@ -1,0 +1,5 @@
+function [mu, sigma] = weightMeanVar(x,w)
+% x: the image vector
+% w: the weights
+mu = w'*x/sum(w);
+sigma = sum(w.*(x - mu))/sum(w)
