@@ -1,0 +1,231 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{nips, times}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{color}
+\usepackage{relsize}
+\usepackage{placeins}
+\usepackage{natbib}
+\usepackage{paralist}
+\usepackage[toc,page]{appendix}
+
+\renewcommand{\null}{\operatorname{null}}
+\newcommand{\given}{\,|\,}
+
+\input math.tex
+
+\nipsfinalcopy
+
+\begin{document}
+\title{Image Segmentation for ISH embryos}
+
+\author{
+Fanny Yang\\
+University of California\\
+Berkeley, CA 94720, USA\\
+\texttt{fanny-yang@eecs.berkeley.edu} \\
+\And
+Siqi Wu\\
+University of California\\
+Berkeley, CA 94720, USA\\
+\texttt{siqi@stat.berkeley.edu}\\
+}
+
+\maketitle
+
+\section{Previous works}
+
+\paragraph{Deformable models}
+Active contours:
+\cite{Cootes92_ActiveShape,Cootes01_ActiveApp, Cootes92_TrainingShape, Kass88_Snakes}
+\cite{Sclaroff01_RegionGroup, ElBaz09_ShapeApp, Leventon00_ShapeGeodesic}
+Review papers: \cite{McInerney96_MIReview, Baswaraj12_ACReview}
+
+Level based:
+\cite{Tsai03_MILevelSets, ChanVese01}
+Review paper \cite{Cremers07_Levelreview}
+
+Level based with shape, intensity prior:
+Cremers \cite{Cremers06_KernelDensity, Chan05_LevelShape, Chen09_LevelShapeIntensity}
+
+\paragraph{Graphical models}
+MRF: CRF: \cite{Lafferty01_CRFSeq, He04_MultiScale}
+GraphCut: \cite{Lempitsky_BranchMin}
+Sth completely different: \cite{Andres11_Probabilistic}
+
+\paragraph{Hybrid models}
+\cite{Huang04_MRFDM, Chen12_MIGraphCut, Uzunbas13_MultiOrgan, Schlesinger13}
+
+
+\section{Model}
+We are using a MRF closely linked to Huang. As a difference however we do not use contours $c$ which carry the burden of parameterization. But we use the continuous counterpart: level set functions, or more specifically, signed distance functions $\phi(i)$.
+
+Let's denote $y$ as our hidden labels, $x$ as our observed image. We index pixels by $i$ and our signed distance function is $\phi$.
+Our graphical model looks like in Huang, and thus our joint distribution with potentials $\psi$ reads
+\begin{align}
+p(x,y,\phi) &=  \prod_i \psi(x_i,y_i)  \prod_{i,j} \psi(y_i,y_j)\prod_i p(y_i|\phi)p(\phi) \label{total_joint}\\
+&=: \prod_i p(x_i|y_i)p(y_i,y_j)p(y_i|\phi)p(\phi)\nonumber
+\end{align}
+
+We model $p(x_i|y_i)$ as Gaussians with parameters $\mu_{y_i}$ and $\sigma_{y_i}$, i.e. 
+\beqs
+p(x_i|y_i) = \frac{1}{\sqrt{2\pi}\sigma_{y_i}}\exp(-\frac{(x_i-\mu_{y_i})^2}{\sigma_{y_i}^2})
+\eeqs
+
+Our pairwise potentials 
+\beqs
+p(y_i,y_j) \propto \exp(-c|y_i-y_j|)/\theta_1 \Indi_{y_i\neq y_j} + \theta_2 \Indi_{y_i=y_j}
+\eeqs
+
+For the consistency measure of the labels $y$ on $\phi$ we use the logistic function
+\beqs
+p(y_i = 1|\phi) = \frac{1}{1 + \E^{-\lambda \phi(i)}}
+\eeqs
+where $\phi(i)$ is basically a signed distance function (possibly other distances) and $\lambda$ controls the sharpness of the slope. Note: Schlesinger uses $\psi(y|\phi) = \E^{\sum_i y_i \phi(i)}$.
+
+
+\subsection{Level Set segmentation}
+The term $p(\phi)$ enables us to incorporate priors and regularizations. In our model we use length and area as in \cite{Cremers06_KernelDensity, ChanVese01, MumfordShah89}. Note that instead of $p(x|\phi)$ in level set formulations we now have $p(x|y)$ and $p(y|\phi)$.
+\begin{align*}
+-\log p(\phi|\tilde{\phi}) &= E_{int}(\phi) + E_{prior}(\phi)\\
+&= \lambda_1 \int_{\Omega}\delta_\epsilon(\phi(x,y))\|\nabla \phi(x,y)\|\d x \d y + \lambda_2 \int_{\Omega}H_\epsilon(\phi(x,y))\d x \d y\\
+&- \log \sum_{i=1}^N \exp\left(-\frac{1}{2\sigma^2}d^2(H(\phi),H(\phi_i))\right)
+\end{align*}
+where $H$ is the Heaviside function and $\sigma^2$ is the width of the Gaussian kernel. $E_{int}$ denotes the regularization on length and area of the region (boundary), $E_{prior}$ is the energy given by the shape prior which is measured as a distance $d^2(H(\phi),H(\phi_i)) = \int_{\Omega}(H(\phi)-H(\phi_i))^2\d x$ is basically doing a nonparametric kernel density estimation for the shape distribution using given samples $\phi_i$. We choose for the kernel width $\sigma^2=\frac{1}{N}\sum_{i=1}^N \min_{j\neq i}d^2(H(\phi_i),H(\phi_j))$.
+
+
+The task is now to maximize $\log Q_D(\phi|b) \propto \log p(b_i|\phi)p(\phi)$ which is equivalent to minimizing the energies $E_{int}, E_{prior}$. By the multivariate Euler Lagrange equations we know that $F(x) = \int \L(x,\phi(x),\nabla \phi(x))\d x$ is minimized if 
+% for which Euler-Lagrange equation for multivariates $x$ yields the following fixed point equation for the optimal $\phi^*$:
+\beqs
+\frac{\partial}{\partial \phi} \L(x,\phi(x),\nabla \phi(x))  + \divop \frac{\partial}{\partial \nabla \phi} \L(x,\phi(x),\nabla \phi(x))=0
+\eeqs 
+
+We now add time for the evolution of the function and minimize the energy with respect to $\phi$ using the update equation
+\begin{align}
+\frac{\partial \phi}{\partial t} &= -\frac{\partial E_{int}(\phi)}{\partial \phi} - \frac{\partial E_{prior}(\phi)}{\partial \phi}  \label{labelset_update}\\
+&=  \delta_{\epsilon}(\phi) (\lambda_1 \left[\divop(\frac{\nabla \phi}{\|\nabla \phi\|})\right] +\lambda_2) - \frac{\sum_i \alpha_i \frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i))}{2\sigma^2 \sum_i \alpha_i}\nonumber
+\end{align}
+with $\alpha_i = \exp(-\frac{d^2(H\phi,H\phi_i)}{2\sigma^2})$.
+This is basically doing a gradient descent. For the second term since $E_{prior}$ is a direct function of $\phi$, we can readily take the partial derivative with respect to $\phi$. $\frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i))}
+$ is a Gateaux derivative and yields
+\beqs
+\frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i)) = \delta_{\epsilon}(\phi)(H(\phi)-H(\phi_i))
+\eeqs
+
+The question is how we can discretize the continuous first term in \eqref{labelset_update}. If we expand it we obtain
+\beqs
+\divop \frac{\nabla \phi}{\|\nabla \phi\|} = \frac{ \frac{\partial^2 \phi}{\partial x^2} (\frac{\partial \phi}{\partial y})^2 - 2 \frac{\partial^2 \phi}{\partial x \partial y} \frac{\partial \phi}{\partial x}\frac{\partial \phi}{\partial y} +  \frac{\partial^2 \phi}{\partial y^2} (\frac{\partial \phi}{\partial x})^2}{(\frac{\partial \phi}{\partial x}^2  + \frac{\partial \phi}{\partial y}^2)^{\frac{3}{2}}}
+\eeqs
+In our implementation we simply approximate the continuous derivatives by finite differences (this is exactly the formula they use in the Chan Vese Matlab package).
+
+The overall formula for the update thus reads
+\begin{align*}
+\frac{\partial \phi}{\partial t} &= \delta_{\epsilon}(\phi)(\lambda_1  \frac{ \frac{\partial^2 \phi}{\partial x^2} (\frac{\partial \phi}{\partial y})^2 - 2 \frac{\partial^2 \phi}{\partial x \partial y} \frac{\partial \phi}{\partial x}\frac{\partial \phi}{\partial y} +  \frac{\partial^2 \phi}{\partial y^2} (\frac{\partial \phi}{\partial x})^2}{(\frac{\partial \phi}{\partial x}^2  + \frac{\partial \phi}{\partial y}^2)^{\frac{3}{2}}} + \lambda_2) \\
+&- \frac{\sum_i \alpha_i  \delta_{\epsilon}(\phi)(H(\phi)-H(\phi_i))}{2\sigma^2 \sum_i \alpha_i}\nonumber
+\end{align*}
+
+
+\paragraph{Notes}
+The hard things are the length and also the derivative of the Heaviside function, which is a $\delta$ distribution. Instead of getting a very sharp boundary we introduce a mollified continuous Heaviside $H_{\epsilon} = $.
+
+\subsection{Variational inference}
+The inference task is to maximize $p(y,\phi|x) \propto p(x,y,\phi)$. However finding the maximum of \eqref{total_joint} exactly is computationally intractable. We use structural variational inference \cite{Jordan99_Variational, Wainwright_Variational} to approximate the problem, in which we look for a $Q(y,\phi|x,a,b)$ with a certain structure and parameters $a,b$ and minimize the Kullback Leibler divergence $KL(Q||P) = \sum_\phi \sum_y Q(y,\phi|x,a,b) \log \frac{Q(y,\phi|x,a,b)}{p(y,\phi|x)}$
+Our ansatz for the structure of $Q$ is the following
+\beqs
+Q(y,\phi|x,a,b) = Q_M(y|x,a)Q_D(\phi|b) 
+\eeqs
+with $Q_M(y|x,a) = \prod_{i,j} \psi(y_i,y_j) \prod_i  \xi(x_i,y_i) p(y_i|a_i)$ and $Q_D(\phi|b) \propto \prod_i p(b_i|\phi) p(\phi)$ so that we have factorized the distribution with respect to the two unknown vectors $y, \phi$. We are hence assuming independence of the two, given $a,b$ respectively.
+
+We now need to minimize the KL divergence for which we follow the easy derivation in Blei:
+Using the independence we can write out the KL 
+\begin{align*}
+&\EE \log Q_M(y|x,a) + \EE \log Q_D(\phi|b) - \EE \log p(y,\phi|x)\\
+ = &\EE \left[\log Q_M(y|x,a)|\phi \right] + \EE \left[ \log Q_D(\phi|b) |y\right] - \EE \left[\EE \log p(y|\phi) |\phi \right]- \EE \log p(\phi)\\
+= &\EE_{Q_M} (\log Q_M(y|x,a) - \EE_{Q_D} \log p(y|\phi)) + \EE_{Q_D} (\log Q_D(\phi|b) - \log p(\phi))\\
+= &\EE_{Q_M} (\log Q_M(y|x,a) - \EE_{Q_D} \log p(y|\phi)) + \EE_{Q_D} (\log p(b|\phi) + c)
+\end{align*}
+where the first equality follows from the conditional independence of $y,\phi$ given $a,b$ and the second uses $Q_D(\phi) = p(\phi)$.
+
+By Lagrange equations of first kind to incorporate the constraint of $\EE Q_D(\phi|b) |b = 1$ and $\EE Q_M(y|x,a) |x,a = 1$  we obtain that the Lagrange multiplier $\lambda = 1$ and the following must hold for optimal $a,b$:
+\begin{align*}
+& -\EE_{Q_D} \log p(y|\phi) + \log Q_M(y|x,a) = 0\\
+\implies  &\sum_i (\EE_{Q_D}\log p(y_i|\phi) - \log p(y_i|a_i)) = \sum_{j\in N(i)} \log p(y_i,y_j) - \EE_{Q_D} \log(p(y_i,y_j)) \\
+\implies &\log p(y_i|a_i) = \EE_{Q_D} \log p(y_i|\phi) 
+\end{align*}
+and similarly
+\begin{align*}
+&- \EE_{Q_M} \log p(y|\phi) + \log p(b|\phi) = 0\\
+\implies &\log p(b_i|\phi) = \EE_{Q^i_M} \log p(y_i|\phi)  
+\end{align*}
+where $Q_M^i = Q_M(y_i|x,a)$.
+
+These are the fixed point equations and we will aim at solving them iteratively using alternating minimization. 
+
+\subsection{Algorithm}
+
+We now turn to the algorithm pipeline
+. 
+\paragraph{Algorithm}
+Initialize level set function $\phi$.
+Step $k$.
+\begin{enumerate}
+\item HOW DO WE do this first step - we only cover a region of $\phi$ for the steps?
+\item Calculate $\phi^* = \argmax_{\phi} Q_D(\phi|b)$ using the current $p(b|\phi)$ and approximate by $Q'_D(c|b) = \delta(\phi^*)$
+\item Calculate $p(y_i|a_i) = \exp(\EE_{Q'_D} \log (y_i|a_i))= p(x_i|\phi^*)$.
+\item In order to calculate $Q_M(y_i|x_i,a)$ estimate the parameters of $p(x_i|\theta_i)$ which are $\mu_1,\mu_0,\sigma_1,\sigma_0$ using the latent variable $y_i$ and the EM algorithm
+\item Calculate $p(b_i|\phi) = \EE_{Q_M^i} \log p(y_i|\phi)$.
+\end{enumerate} 
+
+\subsection{EM algorithm}
+We now turn to the step of estimating the parameters of the Gaussians $p(x_i|y_i)$ for $Q_M(y|x,a)$ for which we will use an EM algorithm. The aim is to calculate 
+\beqs
+\max_{\theta} p(x|\theta,a) = \sum_y p(x,y|\theta) = \sum_y p(x|y,\theta)p(y|a)
+\eeqs
+For the EM algorithm we have the E Step
+\begin{align*}
+\L(q^{(t+1)},\theta) &= \sum_y p(y|x,\theta^{(t)}) (\log p(x|y,\theta) + \log p(y|a)) \\
+&= \sum_i \sum_{y_i} \log p(x_i|y_i,\theta) \sum_{y_j:j\neq i} p(y|x,\theta^{(t)},a) + c(\theta)\\
+%&= \sum_i \sum_{y_i} p(y_i|x, \theta^{(t)},a) \log p(x_i|y_i,\theta) + c(\theta)\\
+&= \sum_i \sum_{y_i} p(y_i|x, \theta^{(t)},a) \Indi_{y_i=l} (-\log \sigma_l - \frac{(x_i -\mu_l)^2}{2\sigma_l^2}) + c(\theta)\\
+&= \sum_i \sum_l p(y_i = l|x,\theta^{(t)},a) (-\log \sigma_l -  \frac{(x_i -\mu_l)^2}{2\sigma_l^2}) + c(\theta)
+\end{align*}
+
+For the maximization step we maximize $\L(q^{(t+1)},\theta)$ over $\theta$ so that we have
+\begin{align*}
+\mu_l^{(t+1)} &= \frac{\sum_i p(y_i=l|x,\theta^{(t)},a) x_i}{\sum_i p(y_i=l|x,\theta^{(t)})}\\
+\sigma_l^{2(t+1)} &= \frac{\sum_i p(y_i =l | x,\theta^{(t)},a)(x_i-\mu_l)^2}{\sum_i p(y_i = l|x,\theta^{(t)},a)}
+\end{align*}
+which intuitively just computes the average intensity/variance within one label.
+
+\subsection{Belief Propagation}
+As we see we need to compute the marginal likelihood 
+\beqs
+p(y_i|x,\theta^{(t)},a) \propto \sum_{y_j:j\neq i} \prod_i p(x_i|y_i) \prod_{i,j} p(y_i,y_j) \prod_i p(y_i|a_i)
+\eeqs
+This can be readily computed using a loopy belief propagation algorithm/junction tree algorithm (slow?).
+%% We write down the complete likelihood
+%% \beqs
+%% p(x_i|\theta_i) = p(y_i=1|a_i)p(x_i|y_i=1,\theta_1) + p(y_i=0|a_i)p(x_i|y_i=0,\theta_0)
+%% \eeqs
+%% We need to maximize this likelihood. 
+
+
+\subsection{}
+
+\FloatBarrier
+\vskip 0.2in
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{lit}
+
+\begin{appendices}
+
+\end{appendices}
+\end{document}
