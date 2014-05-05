@@ -1,3 +1,10 @@
-Img = imread('../data/GroupPic2.png');
-Img = imresize(Img,0.1);
-figure;imshow(Img);
+knownMuSigma = 1;
+generateData;
+probA = ones(1,nNodes)*(1/nStates);
+edgeStruct = createImgStructure(X,nStates);
+if knownMuSigma  
+  [nodePot,edgePot] = producePotentials(X,edgeStruct,Mu,Sigma,probA);
+  solveMRF;
+else
+  
+
