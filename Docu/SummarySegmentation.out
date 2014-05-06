@@ -1,0 +1,9 @@
+\BOOKMARK [1][-]{section.1}{Previous works}{}% 1
+\BOOKMARK [1][-]{section.2}{Model}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Structured Variational inference}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{Algorithm}{section.2}% 4
+\BOOKMARK [2][-]{subsection.2.3}{Step 4 - EM algorithm using loopy belief propagation}{section.2}% 5
+\BOOKMARK [2][-]{subsection.2.4}{Step 2- Finding the level set function}{section.2}% 6
+\BOOKMARK [3][-]{subsubsection.2.4.1}{Level Set Segmentation with prior}{subsection.2.4}% 7
+\BOOKMARK [3][-]{subsubsection.2.4.2}{Combining MRF with Level Set}{subsection.2.4}% 8
+\BOOKMARK [1][-]{section*.7}{Appendices}{}% 9

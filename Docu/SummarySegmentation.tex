@@ -58,7 +58,7 @@ Cremers \cite{Cremers06_KernelDensity, Chan05_LevelShape, Chen09_LevelShapeInten
 \paragraph{Graphical models}
 MRF: CRF: \cite{Lafferty01_CRFSeq, He04_MultiScale}
 GraphCut: \cite{Lempitsky_BranchMin}
-Sth completely different: \cite{Andres11_Probabilistic}
+%Sth completely different: \cite{Andres11_Probabilistic}
 
 \paragraph{Hybrid models}
 \cite{Huang04_MRFDM, Chen12_MIGraphCut, Uzunbas13_MultiOrgan, Schlesinger13}
@@ -81,61 +81,18 @@ p(x_i|y_i) = \frac{1}{\sqrt{2\pi}\sigma_{y_i}}\exp(-\frac{(x_i-\mu_{y_i})^2}{\si
 
 Our pairwise potentials 
 \beqs
-p(y_i,y_j) \propto \exp(-c|y_i-y_j|)/\theta_1 \Indi_{y_i\neq y_j} + \theta_2 \Indi_{y_i=y_j}
+p(y_i,y_j) \propto \exp(-c(y_i-y_j)^2)/\theta_1 \Indi_{y_i\neq y_j} + \theta_2 \Indi_{y_i=y_j}
 \eeqs
 
 For the consistency measure of the labels $y$ on $\phi$ we use the logistic function
 \beqs
-p(y_i = 1|\phi) = \frac{1}{1 + \E^{-\lambda \phi(i)}}
+p(y_i|\phi) = (\frac{1}{1 + \E^{-\lambda \phi(i)}})^{y_i} (\frac{1}{1 + \E^{\lambda \phi(i)}})^{1-y_i}
 \eeqs
 where $\phi(i)$ is basically a signed distance function (possibly other distances) and $\lambda$ controls the sharpness of the slope. Note: Schlesinger uses $\psi(y|\phi) = \E^{\sum_i y_i \phi(i)}$.
 
 
-\subsection{Level Set segmentation}
-The term $p(\phi)$ enables us to incorporate priors and regularizations. In our model we use length and area as in \cite{Cremers06_KernelDensity, ChanVese01, MumfordShah89}. Note that instead of $p(x|\phi)$ in level set formulations we now have $p(x|y)$ and $p(y|\phi)$.
-\begin{align*}
--\log p(\phi|\tilde{\phi}) &= E_{int}(\phi) + E_{prior}(\phi)\\
-&= \lambda_1 \int_{\Omega}\delta_\epsilon(\phi(x,y))\|\nabla \phi(x,y)\|\d x \d y + \lambda_2 \int_{\Omega}H_\epsilon(\phi(x,y))\d x \d y\\
-&- \log \sum_{i=1}^N \exp\left(-\frac{1}{2\sigma^2}d^2(H(\phi),H(\phi_i))\right)
-\end{align*}
-where $H$ is the Heaviside function and $\sigma^2$ is the width of the Gaussian kernel. $E_{int}$ denotes the regularization on length and area of the region (boundary), $E_{prior}$ is the energy given by the shape prior which is measured as a distance $d^2(H(\phi),H(\phi_i)) = \int_{\Omega}(H(\phi)-H(\phi_i))^2\d x$ is basically doing a nonparametric kernel density estimation for the shape distribution using given samples $\phi_i$. We choose for the kernel width $\sigma^2=\frac{1}{N}\sum_{i=1}^N \min_{j\neq i}d^2(H(\phi_i),H(\phi_j))$.
 
-
-The task is now to maximize $\log Q_D(\phi|b) \propto \log p(b_i|\phi)p(\phi)$ which is equivalent to minimizing the energies $E_{int}, E_{prior}$. By the multivariate Euler Lagrange equations we know that $F(x) = \int \L(x,\phi(x),\nabla \phi(x))\d x$ is minimized if 
-% for which Euler-Lagrange equation for multivariates $x$ yields the following fixed point equation for the optimal $\phi^*$:
-\beqs
-\frac{\partial}{\partial \phi} \L(x,\phi(x),\nabla \phi(x))  + \divop \frac{\partial}{\partial \nabla \phi} \L(x,\phi(x),\nabla \phi(x))=0
-\eeqs 
-
-We now add time for the evolution of the function and minimize the energy with respect to $\phi$ using the update equation
-\begin{align}
-\frac{\partial \phi}{\partial t} &= -\frac{\partial E_{int}(\phi)}{\partial \phi} - \frac{\partial E_{prior}(\phi)}{\partial \phi}  \label{labelset_update}\\
-&=  \delta_{\epsilon}(\phi) (\lambda_1 \left[\divop(\frac{\nabla \phi}{\|\nabla \phi\|})\right] +\lambda_2) - \frac{\sum_i \alpha_i \frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i))}{2\sigma^2 \sum_i \alpha_i}\nonumber
-\end{align}
-with $\alpha_i = \exp(-\frac{d^2(H\phi,H\phi_i)}{2\sigma^2})$.
-This is basically doing a gradient descent. For the second term since $E_{prior}$ is a direct function of $\phi$, we can readily take the partial derivative with respect to $\phi$. $\frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i))}
-$ is a Gateaux derivative and yields
-\beqs
-\frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i)) = \delta_{\epsilon}(\phi)(H(\phi)-H(\phi_i))
-\eeqs
-
-The question is how we can discretize the continuous first term in \eqref{labelset_update}. If we expand it we obtain
-\beqs
-\divop \frac{\nabla \phi}{\|\nabla \phi\|} = \frac{ \frac{\partial^2 \phi}{\partial x^2} (\frac{\partial \phi}{\partial y})^2 - 2 \frac{\partial^2 \phi}{\partial x \partial y} \frac{\partial \phi}{\partial x}\frac{\partial \phi}{\partial y} +  \frac{\partial^2 \phi}{\partial y^2} (\frac{\partial \phi}{\partial x})^2}{(\frac{\partial \phi}{\partial x}^2  + \frac{\partial \phi}{\partial y}^2)^{\frac{3}{2}}}
-\eeqs
-In our implementation we simply approximate the continuous derivatives by finite differences (this is exactly the formula they use in the Chan Vese Matlab package).
-
-The overall formula for the update thus reads
-\begin{align*}
-\frac{\partial \phi}{\partial t} &= \delta_{\epsilon}(\phi)(\lambda_1  \frac{ \frac{\partial^2 \phi}{\partial x^2} (\frac{\partial \phi}{\partial y})^2 - 2 \frac{\partial^2 \phi}{\partial x \partial y} \frac{\partial \phi}{\partial x}\frac{\partial \phi}{\partial y} +  \frac{\partial^2 \phi}{\partial y^2} (\frac{\partial \phi}{\partial x})^2}{(\frac{\partial \phi}{\partial x}^2  + \frac{\partial \phi}{\partial y}^2)^{\frac{3}{2}}} + \lambda_2) \\
-&- \frac{\sum_i \alpha_i  \delta_{\epsilon}(\phi)(H(\phi)-H(\phi_i))}{2\sigma^2 \sum_i \alpha_i}\nonumber
-\end{align*}
-
-
-\paragraph{Notes}
-The hard things are the length and also the derivative of the Heaviside function, which is a $\delta$ distribution. Instead of getting a very sharp boundary we introduce a mollified continuous Heaviside $H_{\epsilon} = $.
-
-\subsection{Variational inference}
+\subsection{Structured Variational inference}
 The inference task is to maximize $p(y,\phi|x) \propto p(x,y,\phi)$. However finding the maximum of \eqref{total_joint} exactly is computationally intractable. We use structural variational inference \cite{Jordan99_Variational, Wainwright_Variational} to approximate the problem, in which we look for a $Q(y,\phi|x,a,b)$ with a certain structure and parameters $a,b$ and minimize the Kullback Leibler divergence $KL(Q||P) = \sum_\phi \sum_y Q(y,\phi|x,a,b) \log \frac{Q(y,\phi|x,a,b)}{p(y,\phi|x)}$
 Our ansatz for the structure of $Q$ is the following
 \beqs
@@ -180,10 +137,10 @@ Step $k$.
 \item Calculate $\phi^* = \argmax_{\phi} Q_D(\phi|b)$ using the current $p(b|\phi)$ and approximate by $Q'_D(c|b) = \delta(\phi^*)$
 \item Calculate $p(y_i|a_i) = \exp(\EE_{Q'_D} \log (y_i|a_i))= p(x_i|\phi^*)$.
 \item In order to calculate $Q_M(y_i|x_i,a)$ estimate the parameters of $p(x_i|\theta_i)$ which are $\mu_1,\mu_0,\sigma_1,\sigma_0$ using the latent variable $y_i$ and the EM algorithm
-\item Calculate $p(b_i|\phi) = \EE_{Q_M^i} \log p(y_i|\phi)$.
+\item Calculate $\log p(b_i|\phi) = \EE_{Q_M^i} \log p(y_i|\phi)$.
 \end{enumerate} 
 
-\subsection{EM algorithm}
+\subsection{Step 4 - EM algorithm using loopy belief propagation}
 We now turn to the step of estimating the parameters of the Gaussians $p(x_i|y_i)$ for $Q_M(y|x,a)$ for which we will use an EM algorithm. The aim is to calculate 
 \beqs
 \max_{\theta} p(x|\theta,a) = \sum_y p(x,y|\theta) = \sum_y p(x|y,\theta)p(y|a)
@@ -204,7 +161,6 @@ For the maximization step we maximize $\L(q^{(t+1)},\theta)$ over $\theta$ so th
 \end{align*}
 which intuitively just computes the average intensity/variance within one label.
 
-\subsection{Belief Propagation}
 As we see we need to compute the marginal likelihood 
 \beqs
 p(y_i|x,\theta^{(t)},a) \propto \sum_{y_j:j\neq i} \prod_i p(x_i|y_i) \prod_{i,j} p(y_i,y_j) \prod_i p(y_i|a_i)
@@ -217,7 +173,70 @@ This can be readily computed using a loopy belief propagation algorithm/junction
 %% We need to maximize this likelihood. 
 
 
-\subsection{}
+\subsection{Step 2- Finding the level set function}
+\label{levelset}
+\subsubsection{Level Set Segmentation with prior}
+The term $p(\phi)$ enables us to incorporate priors and regularizations. In our model we use length and area as in \cite{Cremers06_KernelDensity, ChanVese01, MumfordShah89}. Note that instead of $p(x|\phi)$ in level set formulations we now have $p(x|y)$ and $p(y|\phi)$.
+\begin{align*}
+-\log p(\phi|\tilde{\phi}) &= E_{int}(\phi) + E_{prior}(\phi)\\
+&= \lambda_1 \int_{\Omega}\delta_\epsilon(\phi(x,y))\|\nabla \phi(x,y)\|\d x \d y + \lambda_2 \int_{\Omega}H_\epsilon(\phi(x,y))\d x \d y\\
+&- \log \sum_{i=1}^N \exp\left(-\frac{1}{2\sigma^2}d^2(H(\phi),H(\phi_i))\right)
+\end{align*}
+where $H$ is the Heaviside function and $\sigma^2$ is the width of the Gaussian kernel. $E_{int}$ denotes the regularization on length and area of the region (boundary), $E_{prior}$ is the energy given by the shape prior which is measured as a distance $d^2(H(\phi),H(\phi_i)) = \int_{\Omega}(H(\phi)-H(\phi_i))^2\d x$ is basically doing a nonparametric kernel density estimation for the shape distribution using given samples $\phi_i$. We choose for the kernel width $\sigma^2=\frac{1}{N}\sum_{i=1}^N \min_{j\neq i}d^2(H(\phi_i),H(\phi_j))$.
+
+
+The task is now to maximize $\log Q_D(\phi|b) \propto \log p(b_i|\phi)p(\phi)$ which is equivalent to minimizing the energies $E_{int}, E_{prior}$. By the multivariate Euler Lagrange equations (cite L.C. Evans) we know that $F(x) = \int \L(x,\phi(x),\nabla \phi(x))\d x$ is minimized if 
+% for which Euler-Lagrange equation for multivariates $x$ yields the following fixed point equation for the optimal $\phi^*$:
+\beqs
+\frac{\partial}{\partial \phi} \L(x,\phi(x),\nabla \phi(x))  + \divop \frac{\partial}{\partial \nabla \phi} \L(x,\phi(x),\nabla \phi(x))=0
+\eeqs 
+
+We now add time for the evolution of the function and minimize the energy with respect to $\phi$ using the update equation
+\begin{align}
+\frac{\partial \phi}{\partial t} &= -\frac{\partial E_{int}(\phi)}{\partial \phi} - \frac{\partial E_{prior}(\phi)}{\partial \phi}  \label{labelset_update}\\
+&=  \delta_{\epsilon}(\phi) (\lambda_1 \left[\divop(\frac{\nabla \phi}{\|\nabla \phi\|})\right] +\lambda_2) - \frac{\sum_i \alpha_i \frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i))}{2\sigma^2 \sum_i \alpha_i}\nonumber
+\end{align}
+with $\alpha_i = \exp(-\frac{d^2(H\phi,H\phi_i)}{2\sigma^2})$.
+This is basically doing a gradient descent. For the second term since $E_{prior}$ is a direct function of $\phi$, we can readily take the partial derivative with respect to $\phi$. $\frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i))}
+$ is a Gateaux derivative and yields
+\beqs
+\frac{\partial}{\partial \phi} d^2(H(\phi),H(\phi_i)) = \delta_{\epsilon}(\phi)(H(\phi)-H(\phi_i))
+\eeqs
+
+The question is how we can discretize the continuous first term in \eqref{labelset_update}. If we expand it we obtain
+\beqs
+\divop \frac{\nabla \phi}{\|\nabla \phi\|} = \frac{ \frac{\partial^2 \phi}{\partial x^2} (\frac{\partial \phi}{\partial y})^2 - 2 \frac{\partial^2 \phi}{\partial x \partial y} \frac{\partial \phi}{\partial x}\frac{\partial \phi}{\partial y} +  \frac{\partial^2 \phi}{\partial y^2} (\frac{\partial \phi}{\partial x})^2}{(\frac{\partial \phi}{\partial x}^2  + \frac{\partial \phi}{\partial y}^2)^{\frac{3}{2}}}
+\eeqs
+In our implementation we simply approximate the continuous derivatives by finite differences (this is exactly the formula they use in the Chan Vese Matlab package).
+
+The overall formula for the update thus reads
+\begin{align*}
+\frac{\partial \phi}{\partial t} &= \delta_{\epsilon}(\phi)(\lambda_1  \frac{ \frac{\partial^2 \phi}{\partial x^2} (\frac{\partial \phi}{\partial y})^2 - 2 \frac{\partial^2 \phi}{\partial x \partial y} \frac{\partial \phi}{\partial x}\frac{\partial \phi}{\partial y} +  \frac{\partial^2 \phi}{\partial y^2} (\frac{\partial \phi}{\partial x})^2}{(\frac{\partial \phi}{\partial x}^2  + \frac{\partial \phi}{\partial y}^2)^{\frac{3}{2}}} + \lambda_2) \\
+&- \frac{\sum_i \alpha_i  \delta_{\epsilon}(\phi)(H(\phi)-H(\phi_i))}{2\sigma^2 \sum_i \alpha_i}\nonumber
+\end{align*}
+
+
+\paragraph{Notes}
+The hard things are the length and also the derivative of the Heaviside function, which is a $\delta$ distribution. Instead of getting a very sharp boundary we introduce a mollified continuous Heaviside $H_{\epsilon} = $.
+
+\subsubsection{Combining MRF with Level Set}
+The coupling of the two frameworks happens in the step when we calculate the minimum of
+\beqs
+-\log Q_D(\phi|b) = -\log p(b|\phi) - \log p(\phi) = - \log p(\phi) - \EE_{Q_M^i}\log p(y_i|\phi)
+\eeqs
+We can use our results derived in section \ref{levelset} and arrive at the update step
+\begin{align*}
+\frac{\partial \phi}{\partial t} &= \frac{\partial}{\partial \phi} \log p(\phi) -\EE_{Q_M^i} \frac{\partial}{\partial \phi} \log p(y_i|\phi)\\
+&= \delta_{\epsilon}(\phi)(\lambda_1  \frac{ \frac{\partial^2 \phi}{\partial x^2} (\frac{\partial \phi}{\partial y})^2 - 2 \frac{\partial^2 \phi}{\partial x \partial y} \frac{\partial \phi}{\partial x}\frac{\partial \phi}{\partial y} +  \frac{\partial^2 \phi}{\partial y^2} (\frac{\partial \phi}{\partial x})^2}{(\frac{\partial \phi}{\partial x}^2  + \frac{\partial \phi}{\partial y}^2)^{\frac{3}{2}}} + \lambda_2) \\
+&- \frac{\sum_i \alpha_i  \delta_{\epsilon}(\phi)(H(\phi)-H(\phi_i)}{2\sigma^2 \sum_i \alpha_i} + \EE_{Q_M^i} \lambda(\frac{y_i}{1 +\E^{\lambda \phi}} - \frac{1-y_i}{1 + \E^{-\lambda \phi}})
+\nonumber
+\end{align*}
+
+\section{Open Questions so far}
+\begin{itemize}
+\item QUESTION: How do you choose $\lambda$?
+\item 
+\end{itemize}
 
 \FloatBarrier
 \vskip 0.2in
