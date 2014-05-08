@@ -1,4 +1,4 @@
-
+addpath(genpath('../'));
 %generateData;
 loadDataFruitfly;
 
@@ -10,13 +10,12 @@ loadDataFruitfly;
 
  MuEst = [0.1,0.5];
  SigmaEst = [0.1,0.3];
-   for i = 1:50
+   for i = 1:20
      [nodePot,edgePot] = producePotentials(X,edgeStruct,MuEst,SigmaEst,probA);
      [nodeBelMF,edgeBelMF,logZMF] = UGM_Infer_MeanField(nodePot,edgePot,edgeStruct);
      [MuEst,SigmaEst] = em_max(nodeBelMF,X(:));
      MuEst
-     SigmaEst
- 
+     SigmaEst 
    end
    solveMRF
 
