@@ -1,12 +1,11 @@
 addpath('../MRF/');
 addpath('../Chan-Vese/');
-generateData;
+loadDataFruitfly;
+%generateData;
 
 %Run MRF
 
 edgeStruct = createImgStructure(X,nStates);
-
-
 lambda = 1;
 beta = 10;
    

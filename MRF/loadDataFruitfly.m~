@@ -1,0 +1,4 @@
+X = imread('../data/embryo.png');
+X = mean(X,3);
+X = (255 - X)/255;
+figure;imagesc(X);
