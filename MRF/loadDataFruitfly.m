@@ -1,3 +1,4 @@
+
 doEmbryo = 0;
 doGut = 0;
 doTouching = 1;
@@ -16,6 +17,7 @@ end
 
 X = mean(X,3);
 X = (255 - X)/255;
+
 figure;imagesc(X);
 nNodes = length(X(:));
 nStates = 2;
