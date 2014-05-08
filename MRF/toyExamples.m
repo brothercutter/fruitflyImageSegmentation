@@ -2,10 +2,11 @@
 %generateData;
 loadDataFruitfly;
 
-% Run MRF
+
+%% Run MRF
+
  probA = ones(nNodes,nStates)*(1/nStates);
  edgeStruct = createImgStructure(X,nStates);
- 
 
  MuEst = [0.1,0.5];
  SigmaEst = [0.1,0.3];
