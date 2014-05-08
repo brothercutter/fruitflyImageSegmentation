@@ -28,7 +28,7 @@ I = X;
 % Customerized Mask
 m = zeros(size(I,1),size(I,2));
 m(10:size(I,1)-10,10:size(I,2)-10) = 1;
-seg = chanvese(I,m,600,0.1); 
+seg = chenvese(I,m,600,0.1); 
 
 % Built-in Mask
-seg = chanvese(I,'large',600,0.1); 
+seg = chenvese(I,'large',600,0.1); 
