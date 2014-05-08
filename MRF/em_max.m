@@ -12,7 +12,7 @@ for k = 1:l
   w = dist(:,k);
   [mu,sigma2] = weightMeanVar(img,w);
   Mu(k) = mu;
-  Sigma(k) = sqrt(sigma2);
+  Sigma(k) = sqrt(sigma2) + eps;
 end
 
 
