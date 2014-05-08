@@ -2,7 +2,7 @@
 generateData;
 
 %% Run MRF
-% probA = ones(1,nNodes)*(1/nStates);
+% probA = ones(nNodes,nStates); %ones(1,nNodes)*(1/nStates);
 % edgeStruct = createImgStructure(X,nStates);
 % knownMuSigma = 0;
 % if knownMuSigma  
