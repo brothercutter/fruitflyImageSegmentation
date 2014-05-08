@@ -15,7 +15,7 @@ nodePot = zeros(nNodes,nStates);
 
 for i = 1:nNodes
   for l = 1:nStates
-    nodePot(i,l) = (1/(sqrt(6.28)*Sigma(l)))*exp(-(Xvec(i)-Mu(l))^2/(2*Sigma(l)^2))*probA(i);
+    nodePot(i,l) = (1/(sqrt(6.28)*Sigma(l)))*exp(-(Xvec(i)-Mu(l))^2/(2*Sigma(l)^2))*probA(i,l);
   end
 end
 
