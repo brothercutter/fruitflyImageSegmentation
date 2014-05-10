@@ -1,7 +1,7 @@
 
 doEmbryo = 0;
 doGut = 0;
-doTouching = 1;
+doTouching =1;
 
 if doEmbryo
   X = imread('../data/embryo.png');
@@ -11,7 +11,7 @@ elseif doGut
   X = imresize(X,0.5);
   X = histeq(X);
 elseif doTouching
-  X = imread('../data/touchingEmb.jpg');
+  X = imread('../data/touchingEmb/touching3.png');
   X = imresize(X,0.07);
 end
 
