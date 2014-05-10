@@ -9,11 +9,13 @@ if doEmbryo
 elseif doGut
   X = imread('../data/gut.png');
   X = imresize(X,0.5);
-  X = histeq(X);
+  X = mean(X,3);
+  %X = histeq(X);
 elseif doTouching
-  X = imread('../data/touchingEmb.jpg');
-  X = imresize(X,0.07);
+  X = imread('../data/touchingEmb/touching3.jpg');
+  X = double(imresize(X,0.07));
 end
+
 
 X = mean(X,3);
 X = (255 - X)/255;
