@@ -5,7 +5,7 @@ doTouching = 1;
 
 if doEmbryo
   X = imread('../data/embryo.png');
-  X = imresize(X,0.25);
+  X = imresize(X,0.5);
 elseif doGut
   X = imread('../data/gut.png');
   X = imresize(X,0.5);
@@ -16,9 +16,10 @@ elseif doTouching
   X = double(imresize(X,0.07));
 end
 
-
+if superpixel ==0
 X = mean(X,3);
 X = (255 - X)/255;
+end
 
 figure;imagesc(X);
 nNodes = length(X(:));
