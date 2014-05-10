@@ -1,8 +1,13 @@
-function seg = chanvese(I,mask,num_iter,mu, EQ_M, hybrid_b, prior_phis, kernel_sigma, Epsilon)
+function seg = chanvese_exp(I,mask,num_iter,mu, nodeBelMF, hybrid_b, prior_phis, kernel_sigma, Epsilon,beta,lambda)
+
+% Only works  for emb3!
+imboundary = findboundary(prior_phis(:,:,5));
 
 no_ex = size(prior_phis,3);
 method = 'chan';
 [m,n] = size(I);
+
+
 
 %%  Preprocessing
 % Resize
@@ -71,6 +76,14 @@ force = eps;
 %-- End Initialization
 
 
+% %  constant EQ_M term
+% expLambdaPhi = exp(lambda*phi0(:));
+% probLogistic = 1./(expLambdaPhi + 1);
+% EQ_M = lambda*(probLogistic.*nodeBelMF(:,2) - (1-probLogistic).*nodeBelMF(:,1));
+% EQ_M = reshape(EQ_M,size(phi0,1),size(phi0,2));
+
+figure(1)
+figure(2)
 
 %-- Main loop
 for i=1:num_iter
@@ -80,8 +93,12 @@ for i=1:num_iter
     force_image = 0; % initial image force for each layer
     
     %% Image dependent force p(i|phi)
-    % Only relevant if i is actually the intensity
-    
+    % Calculate EQ_M
+    expLambdaPhi = exp(lambda*phi0(:));
+    probLogistic = 1./(expLambdaPhi + 1);
+    EQ_M = lambda*(probLogistic.*nodeBelMF(:,2) - (1-probLogistic).*nodeBelMF(:,1));
+    EQ_M = reshape(EQ_M,size(phi0,1),size(phi0,2));
+%   
     for j=1:layer
         L = im2double(P(:,:,j)); % get one image component
         c1 = sum(sum(L.*Heaviside(phi0,Epsilon)))/(length(inidx)+eps); % average inside of Phi0
@@ -123,7 +140,7 @@ for i=1:num_iter
         if i==1
             
             %-- Display settings
-            figure();
+            figure(1);
             subplot(2,2,1); imshow(I); title('Input Image');
             subplot(2,2,2); contour(flipud(phi0), [0 0], 'r','LineWidth',1); title('initial contour');
             subplot(2,2,3); imshow(I); title('Segmentation');
@@ -137,7 +154,7 @@ for i=1:num_iter
     
     % Stepsize
     if i<200
-        stepsize = 1e5;%*i^(-2/3);
+        stepsize = 3e5;%*i^(-2/3);
         %stepsize = 0;
     else
         %stepsize = 1e2;
@@ -147,20 +164,21 @@ for i=1:num_iter
     if hybrid_b ==0 && kernel_sigma == 0         % Want to incorporate MRF?
         force = mu*kappa(phi0, Epsilon)./max(max(abs(kappa(phi0, Epsilon))))+1/layer.*force_image;
     elseif hybrid_b == 0 &&  kernel_sigma ~= 0
-        force1 = mu*kappa(phi0, Epsilon)./max(max(abs(kappa(phi0, Epsilon))))+1/layer.*force_image;
-        %force1=0;
+        %force1 = mu*kappa(phi0, Epsilon)./max(max(abs(kappa(phi0, Epsilon))))+1/layer.*force_image;
+        force1=0;
         %force = force1 - 3*(1e4)*prior_term;
         
         force = force1 - stepsize*prior_term;
         %figure;imagesc(force1);colorbar;
         %figure;imagesc(force);colorbar;
-        figure;imagesc(prior_term);colorbar;
-        pause
+        
         %stopcrap
     else
-        force = mu*kappa(phi0, Epsilon)./max(max(abs(kappa(phi0, Epsilon))))+EQ_M - stepsize*prior_term; %+1/layer.*force_image 
+        force = mu*kappa(phi0, Epsilon)./max(max(abs(kappa(phi0, Epsilon))))+ beta*EQ_M - stepsize*prior_term; %+1/layer.*force_image 
     end
     
+         
+
     
     % Normalize the force
     force = force./(max(max(abs(force))));
@@ -174,30 +192,46 @@ for i=1:num_iter
     new = phi0;
     
     % Check stopping condition
-    indicator = checkstop(old,new,dt);
-    %indicator = 0;
+    %indicator = checkstop(old,new,dt);
+    indicator = 0;
+    current_cont = zeros(size(phi0));
+    current_cont(phi0<0) = 0;
+    current_cont(phi0>=0) = 1;
+    current_bound = findboundary(current_cont);
     
+    figure(2)
+        subplot(2,2,1); imagesc(prior_term/max(max(prior_term))+imboundary);colorbar;
+        subplot(2,2,2); imagesc(force+imboundary); colorbar;
+        subplot(2,2,3); imagesc(phi0/max(max(phi0))+current_bound);   colorbar;
+        subplot(2,2,4); imagesc(EQ_M/max(max(EQ_M))+current_bound); colorbar;
+        pause
+        
     % Intermediate output
     if(mod(i,20) == 0)
+        figure(1)
+        subplot(2,2,3);
         showphi(I,phi0,i);
-        %figure;imagesc(prior_term);colorbar;
+        subplot(2,2,1); imagesc(phi0/max(max(phi0))+imboundary);
+        
     end;
     if indicator % decide to stop or continue
+        figure(1)
         showphi(I,phi0,i);
         
         % Get mask from level set function phi
         seg = phi0>=0; % !!
-        
+        figure(1)
         subplot(2,2,4); imshow(seg); title('Global Region-Based Segmentation');
         
         return;
     end
 end;
+figure(1)
 showphi(I,phi0,i);
 
 % Get mask from level set function phi
 seg = phi0>=0;
-
+figure(1)
 subplot(2,2,4); imshow(seg); title('Global Region-Based Segmentation');
 
 
