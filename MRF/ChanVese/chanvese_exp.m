@@ -83,7 +83,7 @@ force = eps;
 % EQ_M = reshape(EQ_M,size(phi0,1),size(phi0,2));
 
 figure(1)
-figure(2)
+%figure(2)
 
 %-- Main loop
 for i=1:num_iter
@@ -98,7 +98,7 @@ for i=1:num_iter
     probLogistic = 1./(expLambdaPhi + 1);
     EQ_M = lambda*(probLogistic.*nodeBelMF(:,2) - (1-probLogistic).*nodeBelMF(:,1));
     EQ_M = reshape(EQ_M,size(phi0,1),size(phi0,2));
-%   
+    %
     for j=1:layer
         L = im2double(P(:,:,j)); % get one image component
         c1 = sum(sum(L.*Heaviside(phi0,Epsilon)))/(length(inidx)+eps); % average inside of Phi0
@@ -154,7 +154,7 @@ for i=1:num_iter
     
     % Stepsize
     if i<200
-        stepsize = 3e5;%*i^(-2/3);
+        stepsize = 1; %3e5;%*i^(-2/3);
         %stepsize = 0;
     else
         %stepsize = 1e2;
@@ -174,11 +174,8 @@ for i=1:num_iter
         
         %stopcrap
     else
-        force = mu*kappa(phi0, Epsilon)./max(max(abs(kappa(phi0, Epsilon))))+ beta*EQ_M - stepsize*prior_term; %+1/layer.*force_image 
+        force = mu*kappa(phi0, Epsilon)./max(max(abs(kappa(phi0, Epsilon)))) - beta*EQ_M - stepsize*prior_term/max(max(prior_term));%+1/layer.*force_image;
     end
-    
-         
-
     
     % Normalize the force
     force = force./(max(max(abs(force))));
@@ -199,13 +196,13 @@ for i=1:num_iter
     current_cont(phi0>=0) = 1;
     current_bound = findboundary(current_cont);
     
-    figure(2)
-        subplot(2,2,1); imagesc(prior_term/max(max(prior_term))+imboundary);colorbar;
-        subplot(2,2,2); imagesc(force+imboundary); colorbar;
-        subplot(2,2,3); imagesc(phi0/max(max(phi0))+current_bound);   colorbar;
-        subplot(2,2,4); imagesc(EQ_M/max(max(EQ_M))+current_bound); colorbar;
-        pause
-        
+    %     figure(2)
+    %         subplot(2,2,1); imagesc(prior_term/max(max(prior_term))+current_bound);colorbar;
+    %         subplot(2,2,2); imagesc(force+current_bound); colorbar;
+    %         subplot(2,2,3); imagesc(phi0/max(max(phi0))+current_bound);   colorbar;
+    %         subplot(2,2,4); imagesc(EQ_M/max(max(EQ_M))+current_bound); colorbar;
+    %         pause
+    %
     % Intermediate output
     if(mod(i,20) == 0)
         figure(1)
