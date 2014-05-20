@@ -6,13 +6,25 @@ addpath(genpath('../UGM/'))
 addpath(genpath('../MRF'))
 
 %% Algorithm constants
-lambda = 5; % 5, beta 1.5%
+
+% Choosing which combination to run
+% kernel_sigma = 0 -> no priors
+% hybrid_b = 0 -> only Level set
+priors_b = 1;
+hybrid_b = 1;
+
+% Choosing some constants
+lambda = 3; % 5, beta 1.5%
 beta = 1.5;
-Epsilon = 10;
+Epsilon = 3;
+
+% Run what
 superpixel = 1;
 plot_all = 0; % 0 if you want results only
 plot_int_results = 0; % 1 if you want intermediate results only
-doSuperPixels = 0; %  if new data, set this 1
+doSuperPixels = 0; %  if new data, set this 1 to run superpixel algorithm
+
+whichHeaviside = 'sin';
 
 %% Prior Pre-processing
 % Load prior
@@ -23,10 +35,13 @@ Phi(Phi>0.5) = 1;
 Phi(Phi<=0.5) =0;
 prior_phis = Phi(:,:,:);
 no_ex = size(prior_phis,3);
+
 % Compute kernel sigma
-kernel_sigma = mean(get_Hdistance(circshift(prior_phis,[0 0 -1]),prior_phis,Epsilon));
-%kernel_sigma=1e-2;
-no_ex = size(prior_phis,3);
+if priors_b == 1
+    kernel_sigma = mean(get_Hdistance(circshift(prior_phis,[0 0 -1]),prior_phis,Epsilon,whichHeaviside));
+else
+    kernel_sigma=0;
+end
 
 % Create sd_phis
 for k = 1:no_ex
@@ -35,7 +50,7 @@ end
 
 
 %% Load Data
-superpixel = 1; loadDataFruitfly; I = im2double(X);
+loadDataFruitfly; I = im2double(X);
 [nRows,nCols,dump] = size(I);
 
 % Make priors and images match for CV
@@ -46,7 +61,7 @@ I_CV = I_CV/max(I_CV(:));
 
 %% Superpixels
 
-
+% Run superpixel lgorithm
 if doSuperPixels
     rng(215)
     createSuperPixels;
@@ -72,12 +87,14 @@ end
 Sp = imresize(Sp_r,size(I(:,:,1)),'nearest');
 nStates = 2;
 
+% Create edge structure
 createNeighbor;
 [edgePot,edgePotVec] = produceEdgePotentials(par.pb_emag,edgeStruct,idxArray,nStates);
 plotSuperPixelNeighbors;
 %pause
 
-G = zeros(nSp,2);  % index matrix for centers of gravity in CV image size
+% Create index matrix for centers of gravity in CV image size
+G = zeros(nSp,2);  
 no_sp = zeros(nSp,1);
 for i = 1:nSp
     [row_i col_i] = find(Sp_r == i);
@@ -89,8 +106,7 @@ end
 %text(G(:,2), G(:,1), num2strBatch(1:nSp));
 idxTemp = G(:,1)+(G(:,2)-1)*prior_size(1);
 
-% transform the pixel intensity to superpixel intensity
-
+% Transform the pixel intensity to superpixel intensity
 X = zeros(nSp,2);
 for i = 1:nSp
     X(i,1) = 1-mean(I(find(Sp == i)));
@@ -111,12 +127,14 @@ end
 %% Level set function initialization
 m = zeros(prior_size);
 m(10:size(I_CV,1)-10,5:size(I_CV,2)-10) = 1;
+% % --- Use different initialization
 %  m0 = Phi(:,:,23);
 %  m(m0>0.5) = 1;
 %  m(m0<=0.5) = 0;
-phi = make_sdfunc(m); %m; %(:); %
+phi = make_sdfunc(m);
 
 %% Algorithm
+
 % MRF Initialization
 %MuEst = [0.4,.5]; %0.41, 0.75
 %SigmaEst = [0.13,0.119];
@@ -131,15 +149,19 @@ end
 i = 0;
 diff = 1;
 iter_max = 20;
+
+% Initialize potentials and contour
 nodeBelMF_CV = zeros(prior_size(1)*prior_size(2),nStates);
 probLogistic_CV = zeros(prior_size(1)*prior_size(2),1);
-
 size_ICV = size(I_CV);
 phi_vec = phi(:);
-expLambdaPhi = exp(lambda*phi(idxTemp));
-probLogistic = 1./(expLambdaPhi + 1);
 probA = ones(nSp,nStates)*(1/nStates);
-%probA = [probLogistic,1-probLogistic];
+
+% % Initializing with initial contour
+% expLambdaPhi = exp(lambda*phi(idxTemp));
+% probLogistic = 1./(expLambdaPhi + 1);
+%probA = [probLogistic,1-probLogistic];     
+
 mask = phi;
 
 
@@ -147,11 +169,8 @@ for i = 1:4
     
     %% Run EM for parameter estimation & Q_M^i calculation
     for j = 1:10
-        %[MuEst,SigmaEst] = normalMixtureEM(MuEst,SigmaEst,X,edgeStruct,probA,20);
-        %[nodePot,edgePot] = producePotentials(X,edgeStruct,MuEst,SigmaEst,probA);
         nodePot = producePotentials(X,edgeStruct,MuEst,SigmaEst,probA);
         [nodeBelMF,edgeBelMF,logZMF] = UGM_Infer_MeanField(nodePot,edgePot,edgeStruct);
-        %[nodeBelMF,edgeBelMF,logZMF] = UGM_Infer_LBP(nodePot,edgePot,edgeStruct);
         [MuEst,SigmaEst] = em_max(nodeBelMF,X);
     end
     
@@ -182,21 +201,15 @@ for i = 1:4
     end
     
     %% Level set segmentation for calculation of p(y_i|a_i)
-    % Take the most likely binary mask of MRF as initialization
+    % % Take the most likely binary mask of MRF as initialization
     %if i>=2
     %  mask = getmask_frompot(nodeBelMF_CV,size_ICV(1),size_ICV(2));
     %  mask = make_sdfunc(mask);
     %end
     
-    % Choosing which combination to run
-    % kernel_sigma = 0 -> no priors
-    % hybrid_b = 0 -> only Level set
-    % kernel_sigma = 0;
-    hybrid_b = 1;
-    
     % Run Level Set
     mask = phi;
-    [phi_crap m] = chanvese_exp(I_CV,mask,100,0.1,nodeBelMF_CV,hybrid_b,sd_phis, kernel_sigma, Epsilon,beta,1);
+    [phi_crap m] = chanvese_exp(I_CV,mask,100,0.1,nodeBelMF_CV,hybrid_b,sd_phis, kernel_sigma, Epsilon,beta,1,whichHeaviside);
     % Make it a signed distance func
     phi = make_sdfunc(m);   % phi is a matrix!
     
@@ -207,11 +220,11 @@ for i = 1:4
     probA = [probLogistic, 1-probLogistic];
     
     %% Plotting intermediate results
-    bdd = findboundary(m,2);
+    bdd = findboundary(m,2); %figure;imshow(bdd+I_CV);
     if plot_int_results == 1 || plot_all ==1
         bdd2 = imresize(bdd,[size(I,1),size(I,2)]);
         figure;imshow(I(:,:,1)-bdd2);
-        %figure;imshow(bdd+I_CV);
+        
         % LevelSet result
         help_mat = reshape(nodeBelMF_CV(:,2),[size(I_CV,1),size(I_CV,2)]);
         help_mat = get_binarymask(help_mat);

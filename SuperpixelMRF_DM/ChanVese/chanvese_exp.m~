@@ -1,4 +1,4 @@
-function [phi0 seg] = chanvese_exp(I,mask,num_iter,mu, nodeBelMF, hybrid_b, prior_phis, kernel_sigma, Epsilon,beta,lambda,whichHeaviside)
+function [phi0 seg] = chanvese_exp(I,mask,num_iter,mu, nodeBelMF, hybrid_b, prior_phis, kernel_sigma, Epsilon,beta,lambda)
 
 no_ex = size(prior_phis,3);
 [m,n] = size(I);
@@ -84,29 +84,31 @@ for i=1:num_iter
     outidx = find(phi0<0);  % background index
     force_image = 0;        % initial image force for each layer
     
-    %% Compute image, contour dependent force p(i|phi)
+    %% Image dependent force p(i|phi)
     
     %     % Reinitialize phi to sd function
     %     phi0(inidx) = 1;
     %     phi0(outidx) = 0;
     %     phi0 = make_sdfunc(phi0);
     
-    % Calculate Interior energy (contour dependent)
     for j=1:layer
-        L = im2double(P(:,:,j));                                            % get one image component
-        c1 = sum(sum(L.*Heaviside(phi0,Epsilon)))/(length(inidx)+eps);      % average inside of Phi0
+        L = im2double(P(:,:,j)); % get one image component
+        c1 = sum(sum(L.*Heaviside(phi0,Epsilon)))/(length(inidx)+eps); % average inside of Phi0
         c2 = sum(sum(L.*(1-Heaviside(phi0,Epsilon))))/(length(outidx)+eps); % average outside of Phi0
         force_image=-(L-c1).^2+(L-c2).^2+force_image;
+        % sum Image Force on all components (used for vector image)
+        % if 'chan' is applied, this loop become one sigle code as a
+        % result of layer = 1
     end
     
-    % Calculate external energy, EQ_M, which is what the MRF gives CV
+    % Calculate EQ_M, which is what the MRF gives CV
     if hybrid_b == 1
         expLambdaPhi = exp(lambda*phi0(:));
         probLogistic = 1./(expLambdaPhi + 1);
         EQ_M = lambda*(probLogistic.*nodeBelMF(:,2) - (1-probLogistic).*nodeBelMF(:,1));
         EQ_M = reshape(EQ_M,size(phi0,1),size(phi0,2));
     end
-    %% Compute Shape prior term 
+    %% Compute Shape prior term
     
     if kernel_sigma         % Want to incorporate prior?
         
@@ -121,7 +123,8 @@ for i=1:num_iter
         no_ex = size(prior_phis,3);
         
         % Calculate distance
-        dist_phis = get_Hdistance(repmat(phi0, [1 1 no_ex]),prior_phis, Epsilon,whichHeaviside);
+        dist_phis = get_Hdistance(repmat(phi0, [1 1 no_ex]),prior_phis, Epsilon);
+        %figure; imagesc(diff_phi_mat(:,:,1));
         
         %% Kernel density
         %help_vec = exp((-dist_phis)/(2*kernel_sigma));  % - numerical errors
@@ -129,23 +132,27 @@ for i=1:num_iter
         %dist_phis2 = dist_phis - max_dist_phis;
         
         help_vec = exp(-(dist_phis/max(dist_phis))); % Normalize for numercal stability
+        %help_vec = help_vec/(max(help_vec)); 
         norm_const = sum(help_vec)+eps;
         
         % Actual term to add
         alpha_i = reshape(kron(help_vec,ones(m,n)),[m n no_ex]);
         prior_term = delta_eps.*(sum(alpha_i.*diff_phi_mat,3))/(norm_const*2*kernel_sigma);
         
-        % %% Non kernel density (winner takes all)
-        %[val ind_min] = min(dist_phis);
-        %prior_term = delta_eps.*(diff_phi_mat(:,:,ind_min));
+        
+        %% Non kernel density
+        %         [val ind_min] = min(dist_phis);
+        %         prior_term = delta_eps.*(diff_phi_mat(:,:,ind_min));
         %prior_term = (sum(alpha_i.*diff_phi_mat,3))/(norm_const*2*kernel_sigma);
         %prior_term = delta_eps.*sum(diff_phi_mat,3);
-        
         % Normalize prior term if big enough
         if max(max(prior_term)) > 1e-10
             prior_term = prior_term/max(max(prior_term));
         end
-
+        %         figure(200)
+        %         plot(help_vec);
+        %pause
+        
 
     end
     
@@ -155,11 +162,13 @@ for i=1:num_iter
     % Stepsize
     if kernel_sigma == 0
         stepsize = 0; %3e5;%*i^(-2/3);
+        %stepsize = 0;
     else
         stepsize = 1;
+        %stepsize = 1e2;
     end
     
-    % Add force according to method
+    %
     if hybrid_b ==0 && kernel_sigma == 0         % CV 
         force = mu*kappa(phi0, Epsilon)./max(max(abs(kappa(phi0, Epsilon))))+1/layer.*force_image;
     elseif hybrid_b == 0 &&  kernel_sigma ~= 0   % CV with Prior
@@ -183,6 +192,7 @@ for i=1:num_iter
     phi0 = phi0+dt.*force;
     new = phi0;
     
+    
     % Check stopping condition
     %indicator = checkstop(old,new,dt);
     indicator = 0;
@@ -202,7 +212,9 @@ for i=1:num_iter
     if(mod(i,20) == 0)
         %figure(1)
         %subplot(2,2,3);
-        showphi(I,phi0,i);        
+        showphi(I,phi0,i);
+        %subplot(2,2,1); imagesc(phi0/max(max(phi0))+imboundary);
+        
     end;
     if indicator % decide to stop or continue
         figure(1)
@@ -216,7 +228,6 @@ for i=1:num_iter
         return;
     end
 end;
-
 figure(1)
 showphi(I,phi0,i);
 
