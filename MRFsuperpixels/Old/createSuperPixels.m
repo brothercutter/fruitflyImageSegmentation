@@ -41,14 +41,6 @@ fprintf('Ncutting...');
 [Sp,Seg] = imncut_sp(I,par);
 fprintf(' took %.2f minutes\n',etime(clock,st)/60);
 
-nSp = length(unique(Sp(:)));
-
-
-
-
-
-
-
 %st=clock;
 %fprintf('Fine scale superpixel computation...');
 %Sp2 = clusterLocations(Sp,ceil(N*M/N_sp2));
