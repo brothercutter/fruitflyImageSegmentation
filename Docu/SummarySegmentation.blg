@@ -3,44 +3,44 @@ Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: SummarySegmentation.aux
 The style file: plain.bst
 Database file #1: lit.bib
-You've used 26 entries,
+You've used 27 entries,
             2118 wiz_defined-function locations,
-            685 strings with 9898 characters,
-and the built_in function-call counts, 10878 in all, are:
-= -- 1127
-> -- 482
-< -- 15
-+ -- 193
-- -- 162
-* -- 784
-:= -- 1699
-add.period$ -- 89
-call.type$ -- 26
-change.case$ -- 158
+            691 strings with 10145 characters,
+and the built_in function-call counts, 11443 in all, are:
+= -- 1188
+> -- 505
+< -- 16
++ -- 202
+- -- 170
+* -- 820
+:= -- 1778
+add.period$ -- 93
+call.type$ -- 27
+change.case$ -- 165
 chr.to.int$ -- 0
-cite$ -- 26
-duplicate$ -- 420
-empty$ -- 845
-format.name$ -- 162
-if$ -- 2350
+cite$ -- 27
+duplicate$ -- 445
+empty$ -- 889
+format.name$ -- 170
+if$ -- 2481
 int.to.chr$ -- 0
-int.to.str$ -- 26
-missing$ -- 26
-newline$ -- 133
-num.names$ -- 52
-pop$ -- 163
+int.to.str$ -- 27
+missing$ -- 27
+newline$ -- 138
+num.names$ -- 54
+pop$ -- 173
 preamble$ -- 1
-purify$ -- 132
+purify$ -- 138
 quote$ -- 0
-skip$ -- 312
+skip$ -- 333
 stack$ -- 0
-substring$ -- 802
-swap$ -- 133
-text.length$ -- 15
+substring$ -- 847
+swap$ -- 146
+text.length$ -- 16
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 104
+type$ -- 108
 warning$ -- 0
-while$ -- 111
-width$ -- 28
-write$ -- 302
+while$ -- 116
+width$ -- 29
+write$ -- 314

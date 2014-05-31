@@ -222,7 +222,7 @@ for i = 1:10
 
     
     %kernel_sigma = 1;
-    m = chanvese_shiftInvar(I_CV,mask,500,mu,nodeBelMF_CV,hybrid_b,prior_phis(:,:,1), kernel_sigma, Epsilon,beta,1);
+    m = chanvese_shiftInvar(I_CV,mask,500,mu,nodeBelMF_CV,hybrid_b,prior_phis(:,:,:), kernel_sigma, Epsilon,beta,1);
     
 				%ImgTemp = imgShift(prior_phis(:,:,1),0,20);
 				%ImgTemp(:,80:82) = 1;

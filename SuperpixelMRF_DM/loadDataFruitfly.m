@@ -12,7 +12,7 @@ elseif doGut
   X = mean(X,3);
   %X = histeq(X);
 elseif doTouching
-  imgName = '../data/touchingEmb/touching8';
+  imgName = '../data/touchingEmb/touching2';
   X = imread([imgName,'.jpg']);  
   X = imresize(X,0.3);
   mask = imread('../data/touchingEmb/mask2.png');

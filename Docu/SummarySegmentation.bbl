@@ -90,6 +90,13 @@ Michael~I Jordan, Zoubin Ghahramani, Tommi~S Jaakkola, and Lawrence~K Saul.
 \newblock An introduction to variational methods for graphical models.
 \newblock {\em Machine learning}, 37(2):183--233, 1999.
 
+\bibitem{KaeSohn13_CRF}
+Andrew Kae, Kihyuk Sohn, Honglak Lee, and Erik Learned-Miller.
+\newblock Augmenting crfs with boltzmann machine shape priors for image
+  labeling.
+\newblock In {\em Computer Vision and Pattern Recognition (CVPR), 2013 IEEE
+  Conference on}, pages 2019--2026. IEEE, 2013.
+
 \bibitem{Kass88_Snakes}
 Michael Kass, Andrew Witkin, and Demetri Terzopoulos.
 \newblock Snakes: Active contour models.

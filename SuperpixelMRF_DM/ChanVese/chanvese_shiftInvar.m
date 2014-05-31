@@ -114,6 +114,7 @@ for i=1:num_iter
       H_phi0 = Heaviside(phi0, Epsilon,whichHeaviside);
       delta_eps = derivativeHeaviside(phi0,Epsilon,whichHeaviside);
       
+      % Center of gravity
       [xx,yy] = computeGravityCenter(phi0);
       mu_phi0 = ceil([xx,yy] - [size(phi0,2)/2,size(phi0,1)/2])-1; % could be buggy here...
       
@@ -130,18 +131,18 @@ for i=1:num_iter
 
       end
 	
-
       int_H_phi0 = sum(H_phi0(:));
       
       [Delta_phi0_x, Delta_phi0_y] = gradient(phi0);
-      
-      diffH_x = zeros(size(diff_phi_mat));
-      diffH_y = zeros(size(diff_phi_mat));
 
       for ii = 1:size(diff_phi_mat,3)
 	diff_phi_mat(:,:,ii) =  H_phi0 - Heaviside(sd_phis_shifted(:,:,ii), Epsilon,whichHeaviside);
       end
+              
+      diffH_x = zeros(size(diff_phi_mat));
+      diffH_y = zeros(size(diff_phi_mat));
 
+      
       for ii = 1:size(diff_phi_mat,3)
 	diffH_x(:,:,ii) = diff_phi_mat(:,:,ii).*delta_eps.*Delta_phi0_x;
 	diffH_y(:,:,ii) = diff_phi_mat(:,:,ii).*delta_eps.*Delta_phi0_y;
@@ -272,13 +273,13 @@ for i=1:num_iter
     current_cont(phi0>=0) = 1;
     current_bound = findboundary(current_cont);
 
-    %{
+    
     figure(2)
-    subplot(2,2,1); imagesc(prior_term+current_bound);colorbar;
-    subplot(2,2,2); imagesc(force+current_bound); colorbar;
+    subplot(2,2,1); imagesc(prior_term+current_bound);colorbar; caxis([-1,1.5]);
+    subplot(2,2,2); imagesc(force+current_bound); colorbar; caxis([-1,1.5]);
     subplot(2,2,3); imagesc(phi0/max(max(phi0))+current_bound);   colorbar;
-    subplot(2,2,4); imagesc(EQ_M/max(max(EQ_M))+current_bound); colorbar;
-    %}
+    subplot(2,2,4); imagesc(shiftInvarTerm); colorbar; %EQ_M/max(max(EQ_M))+current_bound); colorbar;
+    % %}
 				%pause
     
     % Intermediate output
